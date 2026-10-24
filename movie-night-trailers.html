@@ -1,0 +1,161 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="referrer" content="strict-origin-when-cross-origin">
+<title>Movie Night Shortlist</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@700;800&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@500&display=swap">
+<style>
+/* Layout: single column of movie cards, each with two voting rows; sticky filter bar */
+:root{
+  --bg:#f3f1ec; --surface:#ffffff; --fg:#1d1a16; --muted:#6c6458; --line:#ddd6ca;
+  --accent:#9a5a12; --accent-soft:#f4e6d2;
+  --yes:#2f6b3a; --yes-soft:#dcebd8; --maybe:#8a6a10; --maybe-soft:#f3e8c4; --no:#9b3a2c; --no-soft:#f3dcd7;
+  --display:"Big Shoulders Display", "Arial Narrow", Impact, sans-serif;
+  --body:"IBM Plex Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --mono:"IBM Plex Mono", ui-monospace, Menlo, monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#16130f; --surface:#1f1b16; --fg:#ece6dc; --muted:#a39885; --line:#342d25;
+  --accent:#e0a24e; --accent-soft:#3a2a15;
+  --yes:#8fcf8a; --yes-soft:#1f3320; --maybe:#e6c25a; --maybe-soft:#3a3114; --no:#ef8f7f; --no-soft:#3d1f1a; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#16130f; --surface:#1f1b16; --fg:#ece6dc; --muted:#a39885; --line:#342d25;
+  --accent:#e0a24e; --accent-soft:#3a2a15;
+  --yes:#8fcf8a; --yes-soft:#1f3320; --maybe:#e6c25a; --maybe-soft:#3a3114; --no:#ef8f7f; --no-soft:#3d1f1a; color-scheme:dark}
+body{margin:0;background:var(--bg);color:var(--fg);font-family:var(--body);font-size:15px;line-height:1.45}
+.wrap{max-width:640px;margin:0 auto;padding-block:20px 48px;
+  padding-left:max(16px, env(safe-area-inset-left, 0px));padding-right:max(16px, env(safe-area-inset-right, 0px))}
+h1{font-family:var(--display);font-weight:800;font-size:2.4rem;line-height:1;margin:0;text-transform:uppercase;text-wrap:balance}
+.sub{color:var(--muted);margin:8px 0 0;max-width:60ch}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:10;background:var(--bg)}
+.bar{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:var(--bg);display:flex;flex-wrap:wrap;gap:8px;align-items:center;padding-block:12px;border-bottom:1px solid var(--line);margin:16px 0 8px}
+.tally{font-family:var(--mono);font-size:.85rem;width:100%;color:var(--muted);font-variant-numeric:tabular-nums}
+.tally b{color:var(--accent)}
+button{font:inherit;font-size:.85rem;font-weight:600;border:1px solid var(--line);background:var(--surface);color:var(--fg);border-radius:6px;padding:7px 12px;cursor:pointer}
+button:hover{border-color:var(--accent)}
+button:focus-visible,a:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.filter[aria-pressed="true"]{background:var(--accent-soft);border-color:var(--accent)}
+.toast{font-size:.8rem;color:var(--yes)}
+.list{display:grid;gap:0}
+.movie{padding-block:14px;border-bottom:1px solid var(--line);display:grid;gap:8px}
+.head{display:flex;gap:10px;align-items:baseline;flex-wrap:wrap}
+.num{font-family:var(--mono);font-size:.8rem;color:var(--muted);min-width:1.6em}
+.title{font-family:var(--display);font-weight:700;font-size:1.35rem;text-transform:uppercase;letter-spacing:.02em;line-height:1.1}
+.yr{font-family:var(--mono);font-size:.8rem;color:var(--muted)}
+.log{margin:0;color:var(--muted);max-width:60ch}
+.trailer{font-size:.85rem;font-weight:600;color:var(--accent);text-decoration:none;justify-self:start}
+.trailer:hover{text-decoration:underline}
+.votes{display:grid;gap:6px}
+.row{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.who{font-size:.8rem;font-weight:600;width:3.6em;color:var(--muted)}
+.v{padding:5px 11px;font-size:.8rem}
+.v[data-val="yes"][aria-pressed="true"]{background:var(--yes-soft);border-color:var(--yes);color:var(--yes)}
+.v[data-val="maybe"][aria-pressed="true"]{background:var(--maybe-soft);border-color:var(--maybe);color:var(--maybe)}
+.v[data-val="no"][aria-pressed="true"]{background:var(--no-soft);border-color:var(--no);color:var(--no)}
+.movie.both .title::after{content:"Both in";font-family:var(--body);font-size:.7rem;font-weight:600;letter-spacing:.06em;margin-left:8px;padding:2px 7px;border-radius:4px;background:var(--yes-soft);color:var(--yes);vertical-align:middle}
+.movie[hidden]{display:none}
+.player{position:relative;width:100%;max-width:100%;aspect-ratio:16/9;background:#000;border-radius:6px;overflow:hidden}
+.player iframe{position:absolute;inset:0;width:100%;height:100%;border:0}
+.tbtn{justify-self:start;display:flex;gap:12px;align-items:center;flex-wrap:wrap}
+.note{color:var(--muted);font-size:.85rem;margin-top:24px;max-width:60ch}
+</style>
+
+</head>
+<body>
+<div class="wrap">
+  <h1>Movie Night Shortlist</h1>
+  <p class="sub">The 16 Drinker Recommends movies you haven't seen. Each of you marks In, Maybe or Pass, then filter down to the ones you both want.</p>
+
+  <div class="bar">
+    <span class="tally" id="tally"></span>
+    <button class="filter" data-f="all" aria-pressed="true">All</button>
+    <button class="filter" data-f="both" aria-pressed="false">Both in</button>
+    <button class="filter" data-f="short" aria-pressed="false">No passes</button>
+    <button id="copy">Copy shortlist</button>
+    <span class="toast" id="toast" aria-live="polite"></span>
+  </div>
+
+  <div class="list" id="list"></div>
+
+  <p class="note">"No passes" keeps any movie neither of you passed on. Votes are saved in this browser only, so mark both people's picks on the same device. Trailers need this page opened from a website; opened as a file on your computer, YouTube may refuse to play them.</p>
+</div>
+
+<script>
+const movies=[
+ [2,"Predator",1987,"Commandos in a Central American jungle get hunted by something that isn't human.","rxHZcDLE6jg"],
+ [3,"Falling Down",1993,"A laid-off man stuck in LA traffic walks off and takes on the whole city, one grievance at a time.","eXKv8g6TuEc"],
+ [4,"Unforgiven",1992,"An old gunman turned pig farmer takes one last bounty job. Clint Eastwood's dark western.","kAueBW5hogc"],
+ [6,"Jaws",1975,"A beach town's police chief hunts the great white shark eating his summer tourists.","tmfgAvYnG7k"],
+ [8,"2010: The Year We Make Contact",1984,"A joint US-Soviet crew goes back to Jupiter to find out what happened on 2001's Discovery.","QP5ueg1Mf_4"],
+ [9,"Dredd",2012,"A future cop and a rookie fight their way up a 200-floor tower run by a drug lord.","G-eI5oLlIeY"],
+ [11,"Boiling Point",2021,"One brutal night in a London restaurant kitchen, shot in a single take.","qA8M3Ottq6U"],
+ [14,"Spider-Man: No Way Home",2021,"Peter Parker's identity is exposed and a spell to fix it pulls in villains from other worlds. Best after earlier Spider-Man films.","JfVOs4VSpmA"],
+ [18,"The Whale",2022,"A reclusive English teacher tries to reconnect with his estranged teenage daughter. Heavy drama.","dOwmBairFgQ"],
+ [20,"Sound of Freedom",2023,"A federal agent quits to rescue children from traffickers in Colombia.","prumre5OVYI"],
+ [21,"Godzilla Minus One",2023,"A disgraced kamikaze pilot in ruined postwar Japan faces Godzilla. Subtitled.","nKi4vT6nB3c"],
+ [22,"One Life",2023,"Anthony Hopkins as Nicholas Winton, who helped get 669 children out of Prague before WWII.","9hpuRzZn0Yc"],
+ [23,"Nosferatu",2024,"A young wife is haunted by a vampire count in 1830s Germany. Gothic horror, very dark.","nulvWqYUM8k"],
+ [24,"Warfare",2025,"A Navy SEAL platoon pinned down in a house in Ramadi, told in real time.","bDynXXOQOYE"],
+ [25,"I Swear",2025,"The true story of John Davidson, a Scot with Tourette's, from a rough childhood to campaigner.","oeWqQN3snCU"],
+ [27,"Obsession",2026,"A wish to make a crush love him goes horribly right. Low-budget horror.","xJYoN-fX2j0"]
+];
+const people=[["me","Me"],["p2","Wife"]];
+const labels={yes:"In",maybe:"Maybe",no:"Pass"};
+const KEY="movie-shortlist-v1";
+let votes={}; try{votes=JSON.parse(localStorage.getItem(KEY)||"{}")}catch(e){}
+function save(){try{localStorage.setItem(KEY,JSON.stringify(votes))}catch(e){}}
+let filter="all";
+const list=document.getElementById("list");
+movies.forEach(([n,t,y,log,yt])=>{
+  const d=document.createElement("div"); d.className="movie"; d.dataset.n=n;
+  let rows=people.map(([k,name])=>`<div class="row"><span class="who">${name}</span>${
+    ["yes","maybe","no"].map(v=>`<button class="v" id="v${n}-${k}-${v}" data-p="${k}" data-val="${v}" aria-pressed="false">${labels[v]}</button>`).join("")}</div>`).join("");
+  d.innerHTML=`<div class="head"><span class="num">${n}</span><span class="title">${t}</span><span class="yr">${y}</span></div>
+  <p class="log">${log}</p>
+  <div class="tbtn"><button class="play" data-yt="${yt}">Play trailer</button><a class="trailer" href="https://www.youtube.com/watch?v=${yt}" target="_blank" rel="noopener">Open on YouTube ↗</a></div>
+  <div class="player" hidden></div>
+  <div class="votes">${rows}</div>`;
+  d.querySelectorAll(".v").forEach(b=>b.addEventListener("click",()=>{
+    votes[n]=votes[n]||{};
+    votes[n][b.dataset.p]= votes[n][b.dataset.p]===b.dataset.val ? undefined : b.dataset.val;
+    save(); render();
+  }));
+  const pb=d.querySelector(".play"), pl=d.querySelector(".player");
+  pb.addEventListener("click",()=>{
+    if(pl.hidden){pl.innerHTML=`<iframe src="https://www.youtube-nocookie.com/embed/${yt}?autoplay=1&rel=0&playsinline=1" title="${t} trailer" allow="autoplay; encrypted-media; picture-in-picture; fullscreen" allowfullscreen referrerpolicy="strict-origin-when-cross-origin"></iframe>`;pl.hidden=false;pb.textContent="Close trailer";}
+    else{pl.innerHTML="";pl.hidden=true;pb.textContent="Play trailer";}
+  });
+  list.appendChild(d);
+});
+function state(n){const v=votes[n]||{};return{me:v.me,p2:v.p2}}
+function isBoth(n){const s=state(n);return s.me==="yes"&&s.p2==="yes"}
+function noPass(n){const s=state(n);return s.me!=="no"&&s.p2!=="no"}
+function render(){
+  let both=0,short=0;
+  document.querySelectorAll(".movie").forEach(d=>{
+    const n=d.dataset.n, s=state(n);
+    d.querySelectorAll(".v").forEach(b=>b.setAttribute("aria-pressed", s[b.dataset.p]===b.dataset.val?"true":"false"));
+    const B=isBoth(n), S=noPass(n); if(B)both++; if(S)short++;
+    d.classList.toggle("both",B);
+    d.hidden = filter==="both"?!B : filter==="short"?!S : false;
+  });
+  document.getElementById("tally").innerHTML=`<b>${both}</b> both in · <b>${short}</b> with no passes · ${movies.length} total`;
+}
+document.querySelectorAll(".filter").forEach(b=>b.addEventListener("click",()=>{
+  filter=b.dataset.f;
+  document.querySelectorAll(".filter").forEach(x=>x.setAttribute("aria-pressed",x===b?"true":"false"));
+  render();
+}));
+document.getElementById("copy").addEventListener("click",()=>{
+  const fmt=v=>v?labels[v]:"-";
+  const lines=movies.filter(([n])=>noPass(n)).map(([n,t])=>{const s=state(n);return `${n}. ${t} (Me: ${fmt(s.me)}, Wife: ${fmt(s.p2)})`});
+  const txt="Shortlist:\n"+(lines.join("\n")||"nothing yet");
+  const t=document.getElementById("toast");
+  navigator.clipboard.writeText(txt).then(()=>{t.textContent="Copied"},()=>{t.textContent="Copy blocked, numbers: "+movies.filter(([n])=>noPass(n)).map(m=>m[0]).join(", ")});
+});
+render();
+</script>
+</body>
+</html>
